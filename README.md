@@ -3,7 +3,7 @@
 ## Group Members
 - David Murillo
 - Jolina Jasperson
-- [Other teammate name]
+- Mariana Cabezas
 
 ## Contributions
 - **David Murillo**: project skeleton, starter files, repository setup
