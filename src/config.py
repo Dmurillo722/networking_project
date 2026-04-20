@@ -1,94 +1,117 @@
-#parses Common.cfg and PeerInfo.cfg
-# Computes total number of pieces by dividing filesize by piece size
+from __future__ import annotations
 
+from dataclasses import dataclass
 import math
+from pathlib import Path
 
 
+@dataclass
 class CommonConfig:
-    def __init__(self):
-        self.number_of_preferred_neighbors = 0
-        self.unchoking_interval = 0
-        self.optimistic_unchoking_interval = 0
-        self.file_name = ""
-        self.file_size = 0
-        self.piece_size = 0
-        self.number_of_pieces = 0
+    number_of_preferred_neighbors: int = 0
+    unchoking_interval: int = 0
+    optimistic_unchoking_interval: int = 0
+    file_name: str = ""
+    file_size: int = 0
+    piece_size: int = 0
+    number_of_pieces: int = 0
 
 
+@dataclass
 class PeerInfo:
-    def __init__(self, peer_id, host_name, port, has_file):
-        self.peer_id = int(peer_id)
-        self.host_name = host_name
-        self.port = int(port)
-        self.has_file = bool(int(has_file))
+    peer_id: int
+    host_name: str
+    port: int
+    has_file: bool
 
 
-def load_common_config(file_path="Common.cfg"):
-    # Make config object
+def _iter_config_lines(file_path: str | Path):
+    with Path(file_path).open("r", encoding="utf-8") as file:
+        for line_number, raw_line in enumerate(file, start=1):
+            line = raw_line.split("#", 1)[0].strip()
+            if line:
+                yield line_number, line
+
+
+def load_common_config(file_path: str | Path = "Common.cfg") -> CommonConfig:
     config = CommonConfig()
+    expected_keys = {
+        "NumberOfPreferredNeighbors": "number_of_preferred_neighbors",
+        "UnchokingInterval": "unchoking_interval",
+        "OptimisticUnchokingInterval": "optimistic_unchoking_interval",
+        "FileName": "file_name",
+        "FileSize": "file_size",
+        "PieceSize": "piece_size",
+    }
+    seen_keys = set()
 
-    with open(file_path, "r") as file:
-        for line in file:
-            line = line.strip()
+    for line_number, line in _iter_config_lines(file_path):
+        parts = line.split(None, 1)
+        if len(parts) != 2:
+            raise ValueError(f"Invalid Common.cfg entry on line {line_number}: {line}")
 
-            if not line:
-                continue
+        key, value = parts
+        if key not in expected_keys:
+            raise ValueError(f"Unknown Common.cfg key on line {line_number}: {key}")
 
-            parts = line.split()
-            key = parts[0]
-            value = parts[1]
+        attribute = expected_keys[key]
+        if attribute == "file_name":
+            setattr(config, attribute, value.strip())
+        else:
+            setattr(config, attribute, int(value))
+        seen_keys.add(key)
 
-            if key == "NumberOfPreferredNeighbors":
-                config.number_of_preferred_neighbors = int(value)
-            elif key == "UnchokingInterval":
-                config.unchoking_interval = int(value)
-            elif key == "OptimisticUnchokingInterval":
-                config.optimistic_unchoking_interval = int(value)
-            elif key == "FileName":
-                config.file_name = value
-            elif key == "FileSize":
-                config.file_size = int(value)
-            elif key == "PieceSize":
-                config.piece_size = int(value)
+    missing_keys = [key for key in expected_keys if key not in seen_keys]
+    if missing_keys:
+        raise ValueError(f"Missing Common.cfg entries: {', '.join(missing_keys)}")
 
-    # Find total number of pieces
-    if config.piece_size > 0:
-        config.number_of_pieces = math.ceil(config.file_size / config.piece_size)
+    if config.file_size < 0:
+        raise ValueError("FileSize must be non-negative")
+    if config.piece_size <= 0:
+        raise ValueError("PieceSize must be positive")
+    if config.number_of_preferred_neighbors < 0:
+        raise ValueError("NumberOfPreferredNeighbors must be non-negative")
+    if config.unchoking_interval <= 0:
+        raise ValueError("UnchokingInterval must be positive")
+    if config.optimistic_unchoking_interval <= 0:
+        raise ValueError("OptimisticUnchokingInterval must be positive")
 
+    config.number_of_pieces = math.ceil(config.file_size / config.piece_size) if config.file_size else 0
     return config
 
 
-def load_peer_info(file_path="PeerInfo.cfg"):
-    # Store all peers here
+def load_peer_info(file_path: str | Path = "PeerInfo.cfg") -> list[PeerInfo]:
     peers = []
+    seen_peer_ids = set()
 
-    with open(file_path, "r") as file:
-        for line in file:
-            line = line.strip()
+    for line_number, line in _iter_config_lines(file_path):
+        parts = line.split()
+        if len(parts) != 4:
+            raise ValueError(f"Invalid PeerInfo.cfg entry on line {line_number}: {line}")
 
-            # Skip blank lines
-            if not line:
-                continue
+        peer_id_text, host_name, port_text, has_file_text = parts
+        peer = PeerInfo(
+            peer_id=int(peer_id_text),
+            host_name=host_name,
+            port=int(port_text),
+            has_file=bool(int(has_file_text)),
+        )
 
-            # Skip comment lines
-            if line.startswith("#"):
-                continue
+        if peer.peer_id <= 0:
+            raise ValueError(f"Peer ID must be positive: {peer.peer_id}")
+        if peer.peer_id in seen_peer_ids:
+            raise ValueError(f"Duplicate peer ID in PeerInfo.cfg: {peer.peer_id}")
+        if peer.port <= 0:
+            raise ValueError(f"Invalid port for peer {peer.peer_id}: {peer.port}")
+        if has_file_text not in {"0", "1"}:
+            raise ValueError(f"has_file must be 0 or 1 for peer {peer.peer_id}")
 
-            parts = line.split()
-
-            peer_id = parts[0]
-            host_name = parts[1]
-            port = parts[2]
-            has_file = parts[3]
-
-            peer = PeerInfo(peer_id, host_name, port, has_file)
-            peers.append(peer)
+        seen_peer_ids.add(peer.peer_id)
+        peers.append(peer)
 
     return peers
 
 
 def get_peer_by_id(peer_id, peers):
-    # Find one peer by id
     for peer in peers:
         if peer.peer_id == int(peer_id):
             return peer
