@@ -21,6 +21,8 @@ class ConnectionManager:
         self.file_composed = False
         self.handlers = []
         self.handlers_lock = threading.Lock()
+        self.completed_peer_ids = set()
+        self.completed_peer_ids_lock = threading.Lock()
         self.accept_thread = None
         self.preferred_neighbors = set()
         self.optimistic_neighbor = None
@@ -32,6 +34,8 @@ class ConnectionManager:
         self._higher_id_peers = self.peers[self._peer_index + 1 :]
         self._expected_incoming = len(self._higher_id_peers)
         self._accepted_incoming = 0
+        if self.piece_manager.check_completion():
+            self.completed_peer_ids.add(self.current_peer.peer_id)
 
     def _find_peer_index(self, peer_id: int) -> int:
         for index, peer in enumerate(self.peers):
@@ -213,6 +217,7 @@ class ConnectionManager:
                     if self.common_config is not None:
                         self.piece_manager.compose_file(self.common_config.file_name)
                     self.file_composed = True
+                    self._mark_peer_complete(self.current_peer.peer_id)
 
                 if self._all_peers_appear_complete():
                     break
@@ -225,18 +230,27 @@ class ConnectionManager:
         if not self.piece_manager.check_completion():
             return False
 
+        self._mark_peer_complete(self.current_peer.peer_id)
+        self._update_completed_neighbors()
+
+        with self.completed_peer_ids_lock:
+            return len(self.completed_peer_ids) == len(self.peers)
+
+    def _update_completed_neighbors(self) -> None:
         with self.handlers_lock:
-            active_handlers = [handler for handler in self.handlers if handler.is_alive()]
+            handlers = list(self.handlers)
 
-        if len(active_handlers) < len(self.peers) - 1:
-            return False
-
-        for handler in active_handlers:
+        for handler in handlers:
+            neighbor_peer_id = getattr(handler, "neighbor_peer_id", None)
             neighbor_bitfield = getattr(handler, "neighbor_bitfield", None)
-            if neighbor_bitfield is None or not neighbor_bitfield.check_completion():
-                return False
+            if neighbor_peer_id is None or neighbor_bitfield is None:
+                continue
+            if neighbor_bitfield.check_completion():
+                self._mark_peer_complete(neighbor_peer_id)
 
-        return True
+    def _mark_peer_complete(self, peer_id: int) -> None:
+        with self.completed_peer_ids_lock:
+            self.completed_peer_ids.add(int(peer_id))
 
     def stop(self) -> None:
         if not self.running:

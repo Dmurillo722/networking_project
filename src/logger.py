@@ -27,25 +27,25 @@ class PeerLogger:
         self._write(f"Peer {self.peer_id} is connected from Peer {int(peer_id)}.")
 
     def log_choked(self, peer_id: int) -> None:
-        self._write(f"Peer {self.peer_id} is choked by Peer {int(peer_id)}.")
+        self._write(f"Peer {self.peer_id} is choked by {int(peer_id)}.")
 
     def log_unchoked(self, peer_id: int) -> None:
-        self._write(f"Peer {self.peer_id} is unchoked by Peer {int(peer_id)}.")
+        self._write(f"Peer {self.peer_id} is unchoked by {int(peer_id)}.")
 
     def log_interested(self, peer_id: int) -> None:
-        self._write(f"Peer {self.peer_id} received the 'interested' message from Peer {int(peer_id)}.")
+        self._write(f"Peer {self.peer_id} received the 'interested' message from {int(peer_id)}.")
 
     def log_not_interested(self, peer_id: int) -> None:
-        self._write(f"Peer {self.peer_id} received the 'not interested' message from Peer {int(peer_id)}.")
+        self._write(f"Peer {self.peer_id} received the 'not interested' message from {int(peer_id)}.")
 
     def log_have(self, peer_id: int, piece_index: int) -> None:
         self._write(
-            f"Peer {self.peer_id} received the 'have' message from Peer {int(peer_id)} for the piece {int(piece_index)}."
+            f"Peer {self.peer_id} received the 'have' message from {int(peer_id)} for the piece {int(piece_index)}."
         )
 
     def log_downloaded_piece(self, peer_id: int, piece_index: int, number_of_pieces: int) -> None:
         self._write(
-            f"Peer {self.peer_id} has downloaded the piece {int(piece_index)} from Peer {int(peer_id)}. "
+            f"Peer {self.peer_id} has downloaded the piece {int(piece_index)} from {int(peer_id)}. "
             f"Now the number of pieces it has is {int(number_of_pieces)}."
         )
 
@@ -59,6 +59,3 @@ class PeerLogger:
     def log_optimistic_unchoke(self, peer_id: int) -> None:
         self._write(f"Peer {self.peer_id} has the optimistically unchoked neighbor {int(peer_id)}.")
 
-
-class Logger(PeerLogger):
-    pass

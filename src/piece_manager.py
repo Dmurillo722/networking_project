@@ -14,7 +14,7 @@ class PieceManager:
         self.piece_size = int(piece_size)
         self.file_size = int(file_size)
         self.has_file = bool(has_file)
-        self.peer_dir = f"peer_{self.peer_id}"
+        self.peer_dir = self._resolve_peer_dir()
         self.bitfield = Bitfield(self.num_pieces)
         self.requested = set()
         self.completion_logged = False
@@ -22,6 +22,16 @@ class PieceManager:
 
         os.makedirs(self.peer_dir, exist_ok=True)
         self._load_existing_pieces()
+
+    def _resolve_peer_dir(self) -> str:
+        id_only_dir = str(self.peer_id)
+        prefixed_dir = f"peer_{self.peer_id}"
+
+        if os.path.isdir(prefixed_dir):
+            return prefixed_dir
+        if os.path.isdir(id_only_dir):
+            return id_only_dir
+        return prefixed_dir
 
     def _piece_path(self, index: int) -> str:
         return os.path.join(self.peer_dir, f"piece_{int(index)}")
@@ -86,9 +96,6 @@ class PieceManager:
                 self.requested.add(chosen_piece)
             return chosen_piece
 
-    def select_piece(self, neighbor_bitfield: Bitfield):
-        return self.get_needed_piece_index(neighbor_bitfield, mark_requested=True)
-
     def save_piece(self, index: int, data: bytes) -> None:
         piece_index = int(index)
         with open(self._piece_path(piece_index), "wb") as piece_file:
@@ -98,16 +105,10 @@ class PieceManager:
             self.requested.discard(piece_index)
             self.bitfield.set_piece(piece_index)
 
-    def write_piece(self, index, data):
-        self.save_piece(index, data)
-
     def get_piece(self, index: int) -> bytes:
         piece_index = int(index)
         with open(self._piece_path(piece_index), "rb") as piece_file:
             return piece_file.read()
-
-    def read_piece(self, index):
-        return self.get_piece(index)
 
     def mark_not_requested(self, index: int) -> None:
         with self.lock:

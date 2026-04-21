@@ -18,18 +18,6 @@ BITFIELD = 5
 REQUEST = 6
 PIECE = 7
 
-MESSAGE_NAMES = {
-    CHOKE: "choke",
-    UNCHOKE: "unchoke",
-    INTERESTED: "interested",
-    NOT_INTERESTED: "not interested",
-    HAVE: "have",
-    BITFIELD: "bitfield",
-    REQUEST: "request",
-    PIECE: "piece",
-}
-
-
 def build_handshake(peer_id: int) -> bytes:
     return HANDSHAKE_HEADER + HANDSHAKE_ZEROS + struct.pack(">I", int(peer_id))
 
@@ -138,10 +126,6 @@ def recv_exact(sock, num_bytes: int) -> bytes:
             )
         data.extend(chunk)
     return bytes(data)
-
-
-def recv_handshake(sock) -> int:
-    return parse_handshake(recv_exact(sock, HANDSHAKE_LENGTH))
 
 
 def recv_message(sock) -> tuple[int, bytes]:

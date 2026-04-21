@@ -238,7 +238,7 @@ class PeerHandler(threading.Thread):
     def broadcast_have(self, piece_index):
         message = build_have(piece_index)
         for handler in list(self.peer_handlers):
-            if handler is self or not getattr(handler, "running", False):
+            if not getattr(handler, "running", False):
                 continue
             try:
                 handler.send_message(message)
