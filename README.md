@@ -10,7 +10,7 @@
 
 - **Jolina Jasperson**: message serialization/parsing, configuration loading, peer startup flow, connection management, peer message handling, logging cleanup, demo verification, and final submission cleanup.
 
-- **Mariana Cabezas**: [add here]
+- **Mariana Cabezas**: logging setup and fixes, connection management, demo setup and recording, final submission cleanup
 
 ## How to Run Demo
 1. Make sure `Common.cfg`, `PeerInfo.cfg`, and the seed peer folders are in the project root. Per the project spec, peer-specific files should live in folders named `peer_<peer_id>`, such as `peer_1001/thefile`.
