@@ -6,7 +6,7 @@
 - Mariana Cabezas
 
 ## Contributions
-- **David Murillo**: project skeleton, starter files, repository setup
+- **David Murillo**: project skeleton, starter files, repository setup, worked on bitfield and piece manager files, video recording and editing
 
 - **Jolina Jasperson**: message serialization/parsing, configuration loading, peer startup flow, connection management, peer message handling, logging cleanup, demo verification, and final submission cleanup.
 
